@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@firebase/app-types": "^0.3.3",
     "firebase": "^5.8.2",
     "react": "^16.8.1",
     "react-dom": "^16.8.1",
@@ -27,6 +28,7 @@
   "devDependencies": {
     "eslint": "5.6.0",
     "eslint-config-airbnb": "^17.1.0",
+    "eslint-config-prettier": "^4.0.0",
     "eslint-plugin-import": "^2.16.0",
     "eslint-plugin-jsx-a11y": "^6.2.1",
     "eslint-plugin-prettier": "^3.0.1",

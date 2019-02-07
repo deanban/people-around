@@ -8,11 +8,15 @@ try {
     databaseURL: process.env.REACT_APP_DATABASEURL,
     projectId: process.env.REACT_APP_PROJECTID,
     storageBucket: process.env.REACT_APP_STORAGEBUCKET,
-    messagingSenderId: process.env.REACT_APP_MESSAGINGSENDERID
+    messagingSenderId: process.env.REACT_APP_MESSAGINGSENDERID,
   };
   firebase.initializeApp(config);
 } catch (error) {
   console.log(error);
+}
+
+function getLocationId({ lat, lng }) {
+  return `${(lat * 10).toFixed()}_${(lng * 10).toFixed()}`;
 }
 
 function addMessege({ lat, lng, username, message }) {
@@ -22,15 +26,11 @@ function addMessege({ lat, lng, username, message }) {
     .ref(`messages/${locationId}/posts`)
     .push({
       date: Date.now(),
-      username: username,
+      username,
       lattitude: lat,
       longitude: lng,
-      content: message
+      content: message,
     });
-}
-
-function getLocationId({ lat, lng }) {
-  return `${(lat * 10).toFixed()}_${(lng * 10).toFixed()}`;
 }
 
 function subscribe({ lat, lng }, cb) {
@@ -40,7 +40,7 @@ function subscribe({ lat, lng }, cb) {
     cb(
       Object.entries(onValueChange.val() || {}).map(([id, data]) => ({
         id,
-        ...data
+        ...data,
       }))
     )
   );
