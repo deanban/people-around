@@ -1,41 +1,148 @@
-import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
-import { addMessage, subscribe } from './firebase';
+import React, { useEffect, useState, useRef } from 'react';
+import { useGeoPosition } from 'the-platform';
+import * as firebase from './firebase';
 
-class App extends Component {
-  componentDidMount() {
-    addMessage({
-      lat: 40.700048,
-      lng: -73.811968,
-      username: 'dean',
-      message: 'hi',
+function useStickyScrollContainer(scrollContainerRef, inputs = []) {
+  const [isStuck, setStuck] = useState(true);
+  useEffect(() => {
+    function handleScroll() {
+      const {
+        clientHeight,
+        scrollTop,
+        scrollHeight,
+      } = scrollContainerRef.current;
+      const partialPixelBuffer = 10;
+      const scrolledUp =
+        clientHeight + scrollTop < scrollHeight - partialPixelBuffer;
+      setStuck(!scrolledUp);
+    }
+    scrollContainerRef.current.addEventListener('scroll', handleScroll);
+    return () =>
+      scrollContainerRef.current.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (isStuck) {
+      scrollContainerRef.current.scrollTop =
+        scrollContainerRef.current.scrollHeight;
+    }
+  }, [
+    scrollContainerRef.current ? scrollContainerRef.current.scrollHeight : 0,
+    ...inputs,
+  ]);
+
+  return isStuck;
+}
+
+function checkInView(element, container = element.parentElement) {
+  const cTop = container.scrollTop;
+  const cBottom = cTop + container.clientHeight;
+  const eTop = element.offsetTop - container.offsetTop;
+  const eBottom = eTop + element.clientHeight;
+  const isTotal = eTop >= cTop && eBottom <= cBottom;
+  const isPartial =
+    (eTop < cTop && eBottom > cTop) || (eBottom > cBottom && eTop < cBottom);
+  return isTotal || isPartial;
+}
+
+function useVisibilityCounter(containerRef) {
+  const [seenNodes, setSeenNodes] = useState([]);
+
+  useEffect(() => {
+    const newVisibleChildren = Array.from(containerRef.current.children)
+      .filter(n => !seenNodes.includes(n))
+      .filter(n => checkInView(n, containerRef.current));
+    if (newVisibleChildren.length) {
+      setSeenNodes(seen =>
+        Array.from(new Set([...seen, ...newVisibleChildren]))
+      );
+    }
+  });
+
+  return seenNodes;
+}
+
+function App() {
+  const {
+    coords: { latitude, longitude },
+  } = useGeoPosition();
+  const messagesContainerRef = useRef();
+  const [messages, setMessages] = useState([]);
+  const [username, setUsername] = useState(() =>
+    window.localStorage.getItem('geo-chat:username')
+  );
+  useStickyScrollContainer(messagesContainerRef, [messages.length]);
+  const visibleNodes = useVisibilityCounter(messagesContainerRef);
+  const unreadCount = messages.length - visibleNodes.length;
+
+  function sendMessage(e) {
+    e.preventDefault();
+    firebase.addMessage({
+      latitude,
+      longitude,
+      username: username || 'anonymous',
+      content: e.target.elements.message.value,
     });
-
-    console.log(subscribe({ lat: 40.700048, lng: -73.811968 }));
+    e.target.elements.message.value = '';
+    e.target.elements.message.focus();
   }
 
-  render() {
-    console.log(process.env);
-    return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
-      </div>
+  useEffect(() => {
+    const unsubscribe = firebase.subscribe(
+      { latitude, longitude },
+      messages => {
+        setMessages(messages);
+      }
     );
+    return () => {
+      unsubscribe();
+    };
+  }, [latitude, longitude]);
+
+  useEffect(() => {
+    document.title = unreadCount ? `Unread: ${unreadCount}` : 'All read';
+  }, [unreadCount]);
+
+  function handleUsernameChange(e) {
+    const username = e.target.value;
+    setUsername(username);
+    window.localStorage.setItem('geo-chat:username', username);
   }
+
+  return (
+    <div>
+      <label htmlFor="username">Username</label>
+      <input
+        type="text"
+        id="username"
+        value={username}
+        onChange={handleUsernameChange}
+      />
+      <form onSubmit={sendMessage}>
+        <label htmlFor="message">Message</label>
+        <input type="text" id="message" />
+        <button type="submit">send</button>
+      </form>
+      <pre>{JSON.stringify({ latitude, longitude }, null, 2)}</pre>
+      <div
+        id="messagesContainer"
+        ref={messagesContainerRef}
+        style={{
+          border: '1px solid',
+          height: 200,
+          overflowY: 'scroll',
+          padding: '10px 20px',
+          borderRadius: 6,
+        }}
+      >
+        {messages.map(message => (
+          <div key={message.id}>
+            <strong>{message.username}</strong>: {message.content}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default App;
