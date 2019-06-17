@@ -1,8 +1,20 @@
 import React, { Component } from 'react';
 import logo from './logo.svg';
 import './App.css';
+import { addMessage, subscribe } from './firebase';
 
 class App extends Component {
+  componentDidMount() {
+    addMessage({
+      lat: 40.700048,
+      lng: -73.811968,
+      username: 'dean',
+      message: 'hi',
+    });
+
+    console.log(subscribe({ lat: 40.700048, lng: -73.811968 }));
+  }
+
   render() {
     console.log(process.env);
     return (

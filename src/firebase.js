@@ -12,14 +12,16 @@ try {
   };
   firebase.initializeApp(config);
 } catch (error) {
-  console.log(error);
+  console.error(error);
 }
 
 function getLocationId({ lat, lng }) {
   return `${(lat * 10).toFixed()}_${(lng * 10).toFixed()}`;
 }
 
-function addMessege({ lat, lng, username, message }) {
+// console.log(getLocationId({ lat: 40.700048, lng: -73.811968 }));
+
+function addMessage({ lat, lng, username, message }) {
   const locationId = getLocationId({ lat, lng });
   firebase
     .database()
@@ -47,4 +49,4 @@ function subscribe({ lat, lng }, cb) {
   return () => ref.off('value', cb);
 }
 
-export { addMessege, subscribe };
+export { addMessage, subscribe };
